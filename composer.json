@@ -1,0 +1,27 @@
+{
+    "name": "lookyman/json-mapper",
+    "require": {
+        "php": "^8.0",
+        "phpstan/phpstan": "^1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lookyman\\JsonMapper\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lookyman\\JsonMapper\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Lukáš Unger",
+            "email": "looky.msc@gmail.com"
+        }
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "roave/security-advisories": "dev-latest"
+    }
+}
