@@ -47,10 +47,12 @@ final class Mapper
     private array $constructorCache = [];
 
     /**
+     * @param array<class-string, class-string> $classMappings
      * @param array<class-string, array<string, string>> $parameterNameMappings
      */
     public function __construct(
         private ReflectionProvider $broker,
+        private array $classMappings,
         private array $parameterNameMappings,
     ) {
     }
@@ -125,6 +127,7 @@ final class Mapper
             if ($expectedType instanceof TypeWithClassName) {
                 /** @var class-string $class */
                 $class = $expectedType->getClassName();
+                $class = $this->classMappings[$class] ?? $class;
                 $constructor = $this->getConstructor($class);
                 if ($expectedType instanceof GenericObjectType) {
                     $constructor = GenericParametersAcceptorResolver::resolve($expectedType->getTypes(), $constructor);

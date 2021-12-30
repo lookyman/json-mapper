@@ -12,6 +12,9 @@ use function sys_get_temp_dir;
 final class MapperBuilder
 {
 
+    /** @var array<class-string, class-string> */
+    private array $classMappings = [];
+
     /** @var array<class-string, array<string, string>> */
     private array $parameterNameMappings = [];
 
@@ -24,7 +27,21 @@ final class MapperBuilder
             ->getService('brokerFactory');
         assert($brokerFactory instanceof BrokerFactory);
 
-        return new Mapper($brokerFactory->create(), $this->parameterNameMappings); // @phpstan-ignore-line
+        return new Mapper($brokerFactory->create(), $this->classMappings, $this->parameterNameMappings); // @phpstan-ignore-line
+    }
+
+    /**
+     * @param class-string $fromClass
+     * @param class-string $toClass
+     */
+    public function withClassMapping(
+        string $fromClass,
+        string $toClass,
+    ): self {
+        $clone = clone $this;
+        $clone->classMappings[$fromClass] = $toClass;
+
+        return $clone;
     }
 
     /**
