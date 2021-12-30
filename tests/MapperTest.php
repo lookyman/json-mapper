@@ -16,6 +16,7 @@ use Lookyman\JsonMapper\Schema\ClassStringParameter;
 use Lookyman\JsonMapper\Schema\ExtendedStringParameter;
 use Lookyman\JsonMapper\Schema\FloatParameter;
 use Lookyman\JsonMapper\Schema\GenericClassStringParameter;
+use Lookyman\JsonMapper\Schema\GenericIterableParameter;
 use Lookyman\JsonMapper\Schema\GenericObject;
 use Lookyman\JsonMapper\Schema\GenericObjectParameter;
 use Lookyman\JsonMapper\Schema\IntegerParameter;
@@ -35,6 +36,13 @@ use const JSON_THROW_ON_ERROR;
 final class MapperTest extends TestCase
 {
 
+    private ?Mapper $defaultMapper = null;
+
+    private function getDefaultMapper(): Mapper
+    {
+        return $this->defaultMapper ??= (new MapperBuilder())->withCacheDir(__DIR__ . '/..')->build();
+    }
+
     /**
      * @param class-string $class
      * @param object $result
@@ -43,13 +51,7 @@ final class MapperTest extends TestCase
      */
     public function testMapSuccess(string $class, object $json, object $result): void
     {
-        self::assertEquals(
-            $result,
-            (new MapperBuilder())
-                ->withCacheDir(__DIR__ . '/..')
-                ->build()
-                ->map($class, json_encode($json, JSON_THROW_ON_ERROR)),
-        );
+        self::assertEquals($result, $this->getDefaultMapper()->map($class, json_encode($json, JSON_THROW_ON_ERROR)));
     }
 
     /**
@@ -194,6 +196,12 @@ final class MapperTest extends TestCase
             (object) ['one' => ['two' => ['one' => 1], 'one' => ['one' => 'foo']]],
             new GenericObjectParameter(new GenericObject(new ExtendedStringParameter('foo'), new IntegerParameter(1))),
         ];
+
+        yield 'generic iterable parameter' => [
+            GenericIterableParameter::class,
+            (object) ['one' => ['key1' => ['one' => 'foo'], 'key2' => ['one' => 'bar']]],
+            new GenericIterableParameter(['key1' => new StringParameter('foo'), 'key2' => new StringParameter('bar')]),
+        ];
     }
 
     /**
@@ -206,10 +214,7 @@ final class MapperTest extends TestCase
     {
         $this->expectException($exception);
         $this->expectExceptionMessage($message);
-        (new MapperBuilder())
-            ->withCacheDir(__DIR__ . '/..')
-            ->build()
-            ->map($class, json_encode($json, JSON_THROW_ON_ERROR));
+        $this->getDefaultMapper()->map($class, json_encode($json, JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -342,16 +347,20 @@ final class MapperTest extends TestCase
             ParameterDoesNotAcceptValueMapperException::class,
             'Class Lookyman\\JsonMapper\\Schema\\ExtendedStringParameter constructor parameter $one of type string does not accept true',
         ];
+
+        yield 'generic iterable parameter' => [
+            GenericIterableParameter::class,
+            (object) ['one' => [['one' => 'foo'], ['one' => 'bar']]],
+            ArrayDoesNotAcceptValueMapperException::class,
+            'Array of type string does not accept 0',
+        ];
     }
 
     public function testInvalidJson(): void
     {
         $this->expectException(JsonStringIsNotAnObjectMapperException::class);
         $this->expectExceptionMessage('foo');
-        (new MapperBuilder())
-            ->withCacheDir(__DIR__ . '/..')
-            ->build()
-            ->map(StringParameter::class, json_encode('foo', JSON_THROW_ON_ERROR));
+        $this->getDefaultMapper()->map(StringParameter::class, json_encode('foo', JSON_THROW_ON_ERROR));
     }
 
     public function testParameterNameMapping(): void

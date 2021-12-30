@@ -22,6 +22,7 @@ use PHPStan\Type\Constant\ConstantFloatType;
 use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Generic\GenericObjectType;
+use PHPStan\Type\IterableType;
 use PHPStan\Type\NullType;
 use PHPStan\Type\ObjectType;
 use PHPStan\Type\ObjectWithoutClassType;
@@ -41,6 +42,9 @@ use const JSON_THROW_ON_ERROR;
 
 final class Mapper
 {
+
+    /** @var array<class-string, \PHPStan\Reflection\ParametersAcceptor> */
+    private array $constructorCache = [];
 
     /**
      * @param array<class-string, array<string, string>> $parameterNameMappings
@@ -114,7 +118,7 @@ final class Mapper
                 return new ValueAndType($rawValue, $expectedType);
             }
 
-            if ($expectedType instanceof ArrayType) {
+            if ($expectedType instanceof ArrayType || $expectedType instanceof IterableType) {
                 return $this->mapArray($rawValue, $expectedType);
             }
 
@@ -176,23 +180,24 @@ final class Mapper
     ): ValueAndType {
         $array = [];
         $arrayBuilder = ConstantArrayTypeBuilder::createEmpty();
-        $type = $expectedType->getIterableValueType();
-        $withStringKeys = $rawValue instanceof stdClass;
+        $keyType = $expectedType->getIterableKeyType();
+        $itemType = $expectedType->getIterableValueType();
+
         foreach ($rawValue as $key => $item) { // @phpstan-ignore-line
-            $valueAndType = $this->doMap($item, $type);
-            $mappedType = $valueAndType->getType();
-            if (!$type->accepts($mappedType, true)->yes()) {
-                throw new ArrayDoesNotAcceptValueMapperException($type, $item);
+            $keyValueAndType = $this->doMap($key, $keyType);
+            $keyMappedType = $keyValueAndType->getType();
+            if (!$keyType->accepts($keyMappedType, true)->yes()) {
+                throw new ArrayDoesNotAcceptValueMapperException($keyType, $key);
             }
 
-            $key = (string) $key;
-            if ($withStringKeys) {
-                $array[$key] = $valueAndType->getValue();
-            } else {
-                $array[] = $valueAndType->getValue();
+            $itemValueAndType = $this->doMap($item, $itemType);
+            $itemMappedType = $itemValueAndType->getType();
+            if (!$itemType->accepts($itemMappedType, true)->yes()) {
+                throw new ArrayDoesNotAcceptValueMapperException($itemType, $item);
             }
 
-            $arrayBuilder->setOffsetValueType($withStringKeys ? new ConstantStringType($key) : null, $mappedType);
+            $array[$key] = $itemValueAndType->getValue();
+            $arrayBuilder->setOffsetValueType($keyMappedType, $itemMappedType);
         }
 
         return new ValueAndType($array, $arrayBuilder->getArray());
@@ -205,6 +210,10 @@ final class Mapper
      */
     private function getConstructor(string $class): ParametersAcceptor
     {
+        if (isset($this->constructorCache[$class])) {
+            return $this->constructorCache[$class];
+        }
+
         if (!$this->broker->hasClass($class)) {
             throw new CannotFindClassMapperException($class);
         }
@@ -224,7 +233,7 @@ final class Mapper
             throw new ConstructorHasMultipleVariantsMapperException($class);
         }
 
-        return $variants[0];
+        return $this->constructorCache[$class] = $variants[0];
     }
 
 }
