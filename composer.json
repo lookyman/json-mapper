@@ -1,5 +1,6 @@
 {
     "name": "lookyman/json-mapper",
+    "license": "MIT",
     "require": {
         "php": "^8.0",
         "phpstan/phpstan": "^1.2"
