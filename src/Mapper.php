@@ -122,9 +122,7 @@ final class Mapper
                 $class = $expectedType->getClassName();
                 $class = $this->classMappings[$class] ?? $class;
                 $arguments = [];
-                foreach ($this->parametersProvider->getParameters($class, $expectedType) as $parameter) {
-                    $name = $parameter[0];
-                    $type = $parameter[1];
+                foreach ($this->parametersProvider->getParameters($class, $expectedType) as [$name, $type]) {
                     $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? null;
                     $valueAndType = $this->doMap($value, $type);
                     if (!$type->accepts($valueAndType[1], true)->yes()) {
