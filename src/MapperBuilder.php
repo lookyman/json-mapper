@@ -4,6 +4,9 @@ declare(strict_types = 1);
 
 namespace Lookyman\JsonMapper;
 
+use Lookyman\JsonMapper\Parameters\BrokerProvider;
+use Lookyman\JsonMapper\Parameters\MemoizingProvider;
+use Lookyman\JsonMapper\Parameters\Provider;
 use PHPStan\Broker\BrokerFactory;
 use PHPStan\DependencyInjection\ContainerFactory;
 use function assert;
@@ -20,14 +23,11 @@ final class MapperBuilder
 
     private ?string $cacheDir = null;
 
+    private ?Provider $parametersProvider = null;
+
     public function build(): Mapper
     {
-        $brokerFactory = (new ContainerFactory(__DIR__))
-            ->create($this->cacheDir ?? (sys_get_temp_dir() . '/lookyman/json-mapper'), [], [], [], [], 'max')
-            ->getService('brokerFactory');
-        assert($brokerFactory instanceof BrokerFactory);
-
-        return new Mapper($brokerFactory->create(), $this->classMappings, $this->parameterNameMappings); // @phpstan-ignore-line
+        return new Mapper($this->parametersProvider ?? $this->getDefaultParametersProvider(), $this->classMappings, $this->parameterNameMappings);
     }
 
     /**
@@ -64,6 +64,24 @@ final class MapperBuilder
         $clone->cacheDir = $cacheDir;
 
         return $clone;
+    }
+
+    public function withParametersProvider(Provider $parametersProvider): self
+    {
+        $clone = clone $this;
+        $clone->parametersProvider = $parametersProvider;
+
+        return $this;
+    }
+
+    private function getDefaultParametersProvider(): Provider
+    {
+        $brokerFactory = (new ContainerFactory(__DIR__))
+            ->create($this->cacheDir ?? (sys_get_temp_dir() . '/lookyman/json-mapper'), [], [], [], [], 'max')
+            ->getService('brokerFactory');
+        assert($brokerFactory instanceof BrokerFactory);
+
+        return new MemoizingProvider(new BrokerProvider($brokerFactory->create())); // @phpstan-ignore-line
     }
 
 }

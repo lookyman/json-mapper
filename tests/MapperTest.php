@@ -36,11 +36,15 @@ use const JSON_THROW_ON_ERROR;
 final class MapperTest extends TestCase
 {
 
-    private ?Mapper $defaultMapper = null;
+    private static ?Mapper $defaultMapper = null;
 
     private function getDefaultMapper(): Mapper
     {
-        return $this->defaultMapper ??= (new MapperBuilder())->withCacheDir(__DIR__ . '/..')->build();
+        if (self::$defaultMapper !== null) {
+            return self::$defaultMapper;
+        }
+
+        return self::$defaultMapper = (new MapperBuilder())->withCacheDir(__DIR__ . '/..')->build();
     }
 
     /**

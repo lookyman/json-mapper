@@ -5,23 +5,17 @@ declare(strict_types = 1);
 namespace Lookyman\JsonMapper;
 
 use Lookyman\JsonMapper\Exception\ArrayDoesNotAcceptValueMapperException;
-use Lookyman\JsonMapper\Exception\CannotFindClassMapperException;
-use Lookyman\JsonMapper\Exception\ClassDoesNotHaveConstructorMapperException;
 use Lookyman\JsonMapper\Exception\InvalidJsonValueMapperException;
 use Lookyman\JsonMapper\Exception\JsonStringIsNotAnObjectMapperException;
 use Lookyman\JsonMapper\Exception\MapperException;
 use Lookyman\JsonMapper\Exception\ParameterDoesNotAcceptValueMapperException;
-use Lookyman\JsonMapper\Exception\ConstructorHasMultipleVariantsMapperException;
-use PHPStan\Reflection\GenericParametersAcceptorResolver;
-use PHPStan\Reflection\ParametersAcceptor;
-use PHPStan\Reflection\ReflectionProvider;
+use Lookyman\JsonMapper\Parameters\Provider;
 use PHPStan\Type\ArrayType;
 use PHPStan\Type\Constant\ConstantArrayTypeBuilder;
 use PHPStan\Type\Constant\ConstantBooleanType;
 use PHPStan\Type\Constant\ConstantFloatType;
 use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
-use PHPStan\Type\Generic\GenericObjectType;
 use PHPStan\Type\IterableType;
 use PHPStan\Type\NullType;
 use PHPStan\Type\ObjectType;
@@ -43,15 +37,12 @@ use const JSON_THROW_ON_ERROR;
 final class Mapper
 {
 
-    /** @var array<class-string, \PHPStan\Reflection\ParametersAcceptor> */
-    private array $constructorCache = [];
-
     /**
      * @param array<class-string, class-string> $classMappings
      * @param array<class-string, array<string, string>> $parameterNameMappings
      */
     public function __construct(
-        private ReflectionProvider $broker,
+        private Provider $parametersProvider,
         private array $classMappings,
         private array $parameterNameMappings,
     ) {
@@ -130,15 +121,10 @@ final class Mapper
                 /** @var class-string $class */
                 $class = $expectedType->getClassName();
                 $class = $this->classMappings[$class] ?? $class;
-                $constructor = $this->getConstructor($class);
-                if ($expectedType instanceof GenericObjectType) {
-                    $constructor = GenericParametersAcceptorResolver::resolve($expectedType->getTypes(), $constructor);
-                }
-
                 $arguments = [];
-                foreach ($constructor->getParameters() as $parameter) {
-                    $name = $parameter->getName();
-                    $type = $parameter->getType();
+                foreach ($this->parametersProvider->getParameters($class, $expectedType) as $parameter) {
+                    $name = $parameter[0];
+                    $type = $parameter[1];
                     $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? null;
                     $valueAndType = $this->doMap($value, $type);
                     if (!$type->accepts($valueAndType[1], true)->yes()) {
@@ -208,37 +194,9 @@ final class Mapper
         return [$array, $arrayBuilder->getArray()];
     }
 
-    /**
-     * @param class-string $class
-     *
-     * @throws \Lookyman\JsonMapper\Exception\MapperException
-     */
-    private function getConstructor(string $class): ParametersAcceptor
+    public function getParametersProvider(): Provider
     {
-        if (isset($this->constructorCache[$class])) {
-            return $this->constructorCache[$class];
-        }
-
-        if (!$this->broker->hasClass($class)) {
-            throw new CannotFindClassMapperException($class);
-        }
-
-        $classReflection = $this->broker->getClass($class);
-        if (!$classReflection->hasNativeMethod('__construct')) {
-            throw new ClassDoesNotHaveConstructorMapperException($class);
-        }
-
-        $constructor = $classReflection->getNativeMethod('__construct');
-        if (!$constructor->isPublic()) {
-            throw new ClassDoesNotHaveConstructorMapperException($class);
-        }
-
-        $variants = $constructor->getVariants();
-        if (count($variants) !== 1 || !isset($variants[0])) {
-            throw new ConstructorHasMultipleVariantsMapperException($class);
-        }
-
-        return $this->constructorCache[$class] = $variants[0];
+        return $this->parametersProvider;
     }
 
 }
