@@ -23,6 +23,7 @@ use Lookyman\JsonMapper\Schema\GenericObject;
 use Lookyman\JsonMapper\Schema\GenericObjectParameter;
 use Lookyman\JsonMapper\Schema\IntegerEnum;
 use Lookyman\JsonMapper\Schema\IntegerParameter;
+use Lookyman\JsonMapper\Schema\IntegerRangeParameter;
 use Lookyman\JsonMapper\Schema\LiteralBooleanParameter;
 use Lookyman\JsonMapper\Schema\LiteralFloatParameter;
 use Lookyman\JsonMapper\Schema\LiteralIntegerParameter;
@@ -213,6 +214,18 @@ final class MapperTest extends TestCase
             (object) ['one' => 'foo', 'two' => 1],
             new EnumParameter(StringEnum::FOO, IntegerEnum::ONE),
         ];
+
+        yield 'negative int parameter' => [
+            IntegerRangeParameter::class,
+            (object) ['one' => -10],
+            new IntegerRangeParameter(-10),
+        ];
+
+        yield 'integer range parameter' => [
+            IntegerRangeParameter::class,
+            (object) ['one' => 8],
+            new IntegerRangeParameter(8),
+        ];
     }
 
     /**
@@ -395,6 +408,13 @@ final class MapperTest extends TestCase
             (object) ['one' => 'wtf', 'two' => 3],
             EnumDoesNotAcceptValueMapperException::class,
             'Enum of type Lookyman\\JsonMapper\\Schema\\StringEnum does not accept \'wtf\'',
+        ];
+
+        yield 'negative integer / range parameter' => [
+            IntegerRangeParameter::class,
+            (object) ['one' => 2],
+            ParameterDoesNotAcceptValueMapperException::class,
+            'Class Lookyman\\JsonMapper\\Schema\\IntegerRangeParameter constructor parameter $one of type int<min, -1>|int<3, 10> does not accept 2',
         ];
     }
 
