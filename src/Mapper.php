@@ -17,6 +17,7 @@ use PHPStan\Type\Constant\ConstantBooleanType;
 use PHPStan\Type\Constant\ConstantFloatType;
 use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\ConstantScalarType;
 use PHPStan\Type\Enum\EnumCaseObjectType;
 use PHPStan\Type\IterableType;
 use PHPStan\Type\NullType;
@@ -133,8 +134,8 @@ final class Mapper
             $class = $expectedType->getClassName();
             $class = $this->classMappings[$class] ?? $class;
             $arguments = [];
-            foreach ($this->parametersProvider->getParameters($class, $expectedType) as [$name, $type]) {
-                $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? null;
+            foreach ($this->parametersProvider->getParameters($class, $expectedType) as [$name, $type, $defaultValue]) {
+                $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? ($defaultValue instanceof ConstantScalarType ? $defaultValue->getValue() : null);
                 $valueAndType = $this->doMap($value, $type);
                 if (!$type->accepts($valueAndType[1], true)->yes()) {
                     throw new ParameterDoesNotAcceptValueMapperException($class, $name, $type, $value);

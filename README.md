@@ -32,6 +32,7 @@ Assert::assertEquals(
 );
 ```
 
+If the parameter is not present in source, and has a scalar default value, it will be assigned that value.
 If the parameter is not present in source, but is nullable, it will be assigned a `NULL` value.
 If the source contains keys not present in parameter names, those will be ignored.
 Otherwise, we do not do any guessing or type casting.

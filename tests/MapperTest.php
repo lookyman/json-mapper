@@ -14,6 +14,7 @@ use Lookyman\JsonMapper\Schema\ArrayParameter;
 use Lookyman\JsonMapper\Schema\ArrayShapeParameter;
 use Lookyman\JsonMapper\Schema\BooleanParameter;
 use Lookyman\JsonMapper\Schema\ClassStringParameter;
+use Lookyman\JsonMapper\Schema\DefaultValueParameter;
 use Lookyman\JsonMapper\Schema\EnumParameter;
 use Lookyman\JsonMapper\Schema\ExtendedStringParameter;
 use Lookyman\JsonMapper\Schema\FloatParameter;
@@ -64,6 +65,12 @@ final class MapperTest extends TestCase
      */
     public function mapSuccessProvider(): iterable
     {
+        yield 'default value parameter' => [
+            DefaultValueParameter::class,
+            (object) [],
+            new DefaultValueParameter(true),
+        ];
+
         yield 'nullable parameter' => [
             NullableParameter::class,
             (object) [],

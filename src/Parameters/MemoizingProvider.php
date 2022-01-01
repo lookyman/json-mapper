@@ -10,7 +10,7 @@ use PHPStan\Type\VerbosityLevel;
 final class MemoizingProvider implements Provider
 {
 
-    /** @var array<class-string, array<string, array<array{string, \PHPStan\Type\Type}>>> */
+    /** @var array<class-string, array<string, array<array{string, \PHPStan\Type\Type, ?\PHPStan\Type\Type}>>> */
     private array $cache = [];
 
     public function __construct(private Provider $inner)

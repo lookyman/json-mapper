@@ -50,7 +50,7 @@ final class BrokerProvider implements Provider
             $constructor = GenericParametersAcceptorResolver::resolve($expectedType->getTypes(), $constructor);
         }
 
-        return array_map(static fn (ParameterReflection $parameter): array => [$parameter->getName(), $parameter->getType()], $constructor->getParameters());
+        return array_map(static fn (ParameterReflection $parameter): array => [$parameter->getName(), $parameter->getType(), $parameter->getDefaultValue()], $constructor->getParameters());
     }
 
 }

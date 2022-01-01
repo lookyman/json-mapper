@@ -12,7 +12,7 @@ interface Provider
     /**
      * @param class-string $class
      *
-     * @return array<array{string, \PHPStan\Type\Type}>
+     * @return array<array{string, \PHPStan\Type\Type, ?\PHPStan\Type\Type}>
      *
      * @throws \Lookyman\JsonMapper\Exception\MapperException
      */
