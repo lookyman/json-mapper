@@ -1,6 +1,6 @@
 # JSON Mapper
 
-Strict JSON to object hydrator based on PHPStan.
+Strict JSON to object hydrator based on [PHPStan](https://phpstan.org/).
 
 ## Usage
 
@@ -50,7 +50,7 @@ In case of any error, `Lookyman\JsonMapper\Exception\MapperException` is thrown.
 * unions (including nullable parameters),
 * backed enums.
 
-See `tests` directory for examples.
+See [PHPStan documentation](https://phpstan.org/writing-php-code/phpdoc-types) and `tests` directory for examples.
 
 ## Caveats
 
