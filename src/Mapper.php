@@ -118,50 +118,50 @@ final class Mapper
             return $this->mapArray($rawValue, $expectedType);
         }
 
-        if ($rawValue instanceof stdClass) {
-            if ($expectedType instanceof ObjectWithoutClassType) {
-                return [$rawValue, $expectedType];
-            }
+        // $rawValue is instance of stdClass from this point on
 
-            if ($expectedType instanceof ArrayType || $expectedType instanceof IterableType) {
-                return $this->mapArray($rawValue, $expectedType);
-            }
+        if ($expectedType instanceof ObjectWithoutClassType) {
+            return [$rawValue, $expectedType];
+        }
 
-            if ($expectedType instanceof TypeWithClassName) {
-                /** @var class-string $class */
-                $class = $expectedType->getClassName();
-                $class = $this->classMappings[$class] ?? $class;
-                $arguments = [];
-                foreach ($this->parametersProvider->getParameters($class, $expectedType) as [$name, $type]) {
-                    $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? null;
-                    $valueAndType = $this->doMap($value, $type);
-                    if (!$type->accepts($valueAndType[1], true)->yes()) {
-                        throw new ParameterDoesNotAcceptValueMapperException($class, $name, $type, $value);
-                    }
+        if ($expectedType instanceof ArrayType || $expectedType instanceof IterableType) {
+            return $this->mapArray($rawValue, $expectedType);
+        }
 
-                    $arguments[$name] = $valueAndType[0];
+        if ($expectedType instanceof TypeWithClassName) {
+            /** @var class-string $class */
+            $class = $expectedType->getClassName();
+            $class = $this->classMappings[$class] ?? $class;
+            $arguments = [];
+            foreach ($this->parametersProvider->getParameters($class, $expectedType) as [$name, $type]) {
+                $value = $rawValue->{$this->parameterNameMappings[$class][$name] ?? $name} ?? null;
+                $valueAndType = $this->doMap($value, $type);
+                if (!$type->accepts($valueAndType[1], true)->yes()) {
+                    throw new ParameterDoesNotAcceptValueMapperException($class, $name, $type, $value);
                 }
 
-                return [new $class(...$arguments), $expectedType];
+                $arguments[$name] = $valueAndType[0];
             }
 
-            if ($expectedType instanceof UnionType) {
-                $mapped = [];
-                foreach ($expectedType->getTypes() as $innerType) {
-                    try {
-                        $mapped[] = $this->doMap($rawValue, $innerType);
-                    } catch (MapperException) {
-                        // no-op
-                    }
+            return [new $class(...$arguments), $expectedType];
+        }
 
-                    if (count($mapped) > 1) {
-                        throw new InvalidJsonValueMapperException($rawValue);
-                    }
+        if ($expectedType instanceof UnionType) {
+            $mapped = [];
+            foreach ($expectedType->getTypes() as $innerType) {
+                try {
+                    $mapped[] = $this->doMap($rawValue, $innerType);
+                } catch (MapperException) {
+                    // no-op
                 }
 
-                if (isset($mapped[0])) {
-                    return $mapped[0];
+                if (count($mapped) > 1) {
+                    throw new InvalidJsonValueMapperException($rawValue);
                 }
+            }
+
+            if (isset($mapped[0])) {
+                return $mapped[0];
             }
         }
 

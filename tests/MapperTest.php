@@ -35,7 +35,6 @@ use Lookyman\JsonMapper\Schema\StringParameter;
 use Lookyman\JsonMapper\Schema\UnionOfObjectsParameter;
 use Lookyman\JsonMapper\Schema\UnionParameter;
 use PHPUnit\Framework\TestCase;
-use ValueError;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
