@@ -217,6 +217,30 @@ final class MapperTest extends TestCase
 
     /**
      * @param class-string $class
+     * @param object $result
+     *
+     * @requires PHP >= 8.1
+     * @dataProvider mapSuccessProviderPhp81
+     */
+    public function testMapSuccessPhp81(string $class, object $json, object $result): void
+    {
+        $this->testMapSuccess($class, $json, $result);
+    }
+
+    /**
+     * @return iterable<array{class-string, object, object}>
+     */
+    public function mapSuccessProviderPhp81(): iterable
+    {
+        yield 'enum parameter' => [
+            EnumParameter::class,
+            (object) ['one' => 'foo', 'two' => 1],
+            new EnumParameter(StringEnum::FOO, IntegerEnum::ONE),
+        ];
+    }
+
+    /**
+     * @param class-string $class
      * @param class-string<\Throwable> $exception
      *
      * @dataProvider mapErrorProvider
@@ -366,6 +390,31 @@ final class MapperTest extends TestCase
             'Array of type string does not accept 0',
         ];
 
+        yield 'enum parameter' => [
+            EnumParameter::class,
+            (object) ['one' => 'wtf', 'two' => 3],
+            EnumDoesNotAcceptValueMapperException::class,
+            'Enum of type Lookyman\\JsonMapper\\Schema\\StringEnum does not accept \'wtf\'',
+        ];
+    }
+
+    /**
+     * @param class-string $class
+     * @param class-string<\Throwable> $exception
+     *
+     * @requires PHP >= 8.1
+     * @dataProvider mapErrorProviderPhp81
+     */
+    public function testMapErrorPhp81(string $class, object $json, string $exception, string $message): void
+    {
+        $this->testMapError($class, $json, $exception, $message);
+    }
+
+    /**
+     * @return iterable<array{class-string, object, class-string<\Throwable>, string}>
+     */
+    public function mapErrorProviderPhp81(): iterable
+    {
         yield 'enum parameter' => [
             EnumParameter::class,
             (object) ['one' => 'wtf', 'two' => 3],
