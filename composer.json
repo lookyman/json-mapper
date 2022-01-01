@@ -1,5 +1,6 @@
 {
     "name": "lookyman/json-mapper",
+    "description": "Strict JSON to object hydrator based on PHPStan.",
     "license": "MIT",
     "require": {
         "php": "^8.0",
