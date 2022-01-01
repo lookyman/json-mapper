@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Lookyman\JsonMapper;
 
 use Lookyman\JsonMapper\Exception\ArrayDoesNotAcceptValueMapperException;
+use Lookyman\JsonMapper\Exception\EnumDoesNotAcceptValueMapperException;
 use Lookyman\JsonMapper\Exception\InvalidJsonValueMapperException;
 use Lookyman\JsonMapper\Exception\JsonStringIsNotAnObjectMapperException;
 use Lookyman\JsonMapper\Exception\ParameterDoesNotAcceptValueMapperException;
@@ -13,12 +14,14 @@ use Lookyman\JsonMapper\Schema\ArrayParameter;
 use Lookyman\JsonMapper\Schema\ArrayShapeParameter;
 use Lookyman\JsonMapper\Schema\BooleanParameter;
 use Lookyman\JsonMapper\Schema\ClassStringParameter;
+use Lookyman\JsonMapper\Schema\EnumParameter;
 use Lookyman\JsonMapper\Schema\ExtendedStringParameter;
 use Lookyman\JsonMapper\Schema\FloatParameter;
 use Lookyman\JsonMapper\Schema\GenericClassStringParameter;
 use Lookyman\JsonMapper\Schema\GenericIterableParameter;
 use Lookyman\JsonMapper\Schema\GenericObject;
 use Lookyman\JsonMapper\Schema\GenericObjectParameter;
+use Lookyman\JsonMapper\Schema\IntegerEnum;
 use Lookyman\JsonMapper\Schema\IntegerParameter;
 use Lookyman\JsonMapper\Schema\LiteralBooleanParameter;
 use Lookyman\JsonMapper\Schema\LiteralFloatParameter;
@@ -26,10 +29,12 @@ use Lookyman\JsonMapper\Schema\LiteralIntegerParameter;
 use Lookyman\JsonMapper\Schema\LiteralStringParameter;
 use Lookyman\JsonMapper\Schema\NullableParameter;
 use Lookyman\JsonMapper\Schema\ObjectWithoutClassParameter;
+use Lookyman\JsonMapper\Schema\StringEnum;
 use Lookyman\JsonMapper\Schema\StringParameter;
 use Lookyman\JsonMapper\Schema\UnionOfObjectsParameter;
 use Lookyman\JsonMapper\Schema\UnionParameter;
 use PHPUnit\Framework\TestCase;
+use ValueError;
 use function json_encode;
 use const JSON_THROW_ON_ERROR;
 
@@ -40,11 +45,7 @@ final class MapperTest extends TestCase
 
     private function getDefaultMapper(): Mapper
     {
-        if (self::$defaultMapper !== null) {
-            return self::$defaultMapper;
-        }
-
-        return self::$defaultMapper = (new MapperBuilder())->withCacheDir(__DIR__ . '/..')->build();
+        return self::$defaultMapper ??= (new MapperBuilder())->withCacheDir(__DIR__ . '/..')->build();
     }
 
     /**
@@ -206,6 +207,12 @@ final class MapperTest extends TestCase
             (object) ['one' => ['key1' => ['one' => 'foo'], 'key2' => ['one' => 'bar']]],
             new GenericIterableParameter(['key1' => new StringParameter('foo'), 'key2' => new StringParameter('bar')]),
         ];
+
+        yield 'enum parameter' => [
+            EnumParameter::class,
+            (object) ['one' => 'foo', 'two' => 1],
+            new EnumParameter(StringEnum::FOO, IntegerEnum::ONE),
+        ];
     }
 
     /**
@@ -357,6 +364,13 @@ final class MapperTest extends TestCase
             (object) ['one' => [['one' => 'foo'], ['one' => 'bar']]],
             ArrayDoesNotAcceptValueMapperException::class,
             'Array of type string does not accept 0',
+        ];
+
+        yield 'enum parameter' => [
+            EnumParameter::class,
+            (object) ['one' => 'wtf', 'two' => 3],
+            EnumDoesNotAcceptValueMapperException::class,
+            'Enum of type Lookyman\\JsonMapper\\Schema\\StringEnum does not accept \'wtf\'',
         ];
     }
 

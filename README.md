@@ -40,7 +40,7 @@ In case of any error, `Lookyman\JsonMapper\Exception\MapperException` is thrown.
 
 ## Supported types
 
-Scalars (including literals and integer ranges), arrays (including associative and shapes), iterables, `class-string` (including generic), `object`, normal class objects (including generic), unions (including nullable parameters).
+Scalars (including literals and integer ranges), arrays (including associative and shapes), iterables, `class-string` (including generic), `object`, normal class objects (including generic), unions (including nullable parameters), backed enums.
 
 See `tests` directory for examples.
 

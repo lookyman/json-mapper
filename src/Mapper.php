@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Lookyman\JsonMapper;
 
 use Lookyman\JsonMapper\Exception\ArrayDoesNotAcceptValueMapperException;
+use Lookyman\JsonMapper\Exception\EnumDoesNotAcceptValueMapperException;
 use Lookyman\JsonMapper\Exception\InvalidJsonValueMapperException;
 use Lookyman\JsonMapper\Exception\JsonStringIsNotAnObjectMapperException;
 use Lookyman\JsonMapper\Exception\MapperException;
@@ -16,6 +17,7 @@ use PHPStan\Type\Constant\ConstantBooleanType;
 use PHPStan\Type\Constant\ConstantFloatType;
 use PHPStan\Type\Constant\ConstantIntegerType;
 use PHPStan\Type\Constant\ConstantStringType;
+use PHPStan\Type\Enum\EnumCaseObjectType;
 use PHPStan\Type\IterableType;
 use PHPStan\Type\NullType;
 use PHPStan\Type\ObjectType;
@@ -89,6 +91,10 @@ final class Mapper
         }
 
         if (is_int($rawValue)) {
+            if ($expectedType instanceof ObjectType && $expectedType->getClassReflection()?->isBackedEnum() === true) {
+                return $this->mapEnum($rawValue, $expectedType);
+            }
+
             return [$rawValue, new ConstantIntegerType($rawValue)];
         }
 
@@ -97,6 +103,10 @@ final class Mapper
         }
 
         if (is_string($rawValue)) {
+            if ($expectedType instanceof ObjectType && $expectedType->getClassReflection()?->isBackedEnum() === true) {
+                return $this->mapEnum($rawValue, $expectedType);
+            }
+
             return [$rawValue, new ConstantStringType($rawValue)];
         }
 
@@ -156,6 +166,21 @@ final class Mapper
         }
 
         throw new InvalidJsonValueMapperException($rawValue);
+    }
+
+    /**
+     * @return array{\BackedEnum, \PHPStan\Type\Type}
+     */
+    private function mapEnum(
+        int|string $rawValue,
+        ObjectType $expectedType,
+    ): array {
+        $value = $expectedType->getClassName()::tryFrom($rawValue);
+        if ($value === null) {
+            throw new EnumDoesNotAcceptValueMapperException($expectedType, $rawValue);
+        }
+
+        return [$value, new EnumCaseObjectType($value::class, $value->name)]; // @phpstan-ignore-line
     }
 
     /**
