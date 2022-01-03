@@ -91,6 +91,28 @@ final class Mapper
             return [$rawValue, new NullType()];
         }
 
+        if ($expectedType instanceof UnionType) {
+            $mapped = [];
+            foreach ($expectedType->getTypes() as $innerType) {
+                try {
+                    $valueAndType = $this->doMap($rawValue, $innerType);
+                    if ($innerType->accepts($valueAndType[1], true)->yes()) {
+                        $mapped[] = $valueAndType;
+                    }
+                } catch (MapperException) {
+                    // no-op
+                }
+
+                if (count($mapped) > 1) {
+                    throw new InvalidJsonValueMapperException($rawValue);
+                }
+            }
+
+            if (isset($mapped[0])) {
+                return $mapped[0];
+            }
+        }
+
         if (is_int($rawValue)) {
             if ($expectedType instanceof ObjectType && $expectedType->getClassReflection()?->isBackedEnum() === true) {
                 return $this->mapEnum($rawValue, $expectedType);
@@ -147,25 +169,6 @@ final class Mapper
             return [new $class(...$arguments), $expectedType];
         }
 
-        if ($expectedType instanceof UnionType) {
-            $mapped = [];
-            foreach ($expectedType->getTypes() as $innerType) {
-                try {
-                    $mapped[] = $this->doMap($rawValue, $innerType);
-                } catch (MapperException) {
-                    // no-op
-                }
-
-                if (count($mapped) > 1) {
-                    throw new InvalidJsonValueMapperException($rawValue);
-                }
-            }
-
-            if (isset($mapped[0])) {
-                return $mapped[0];
-            }
-        }
-
         throw new InvalidJsonValueMapperException($rawValue);
     }
 
@@ -185,34 +188,34 @@ final class Mapper
     }
 
     /**
-     * @param iterable<mixed>|\stdClass $rawValue
+     * @param array<mixed>|\stdClass $rawValue
      *
      * @return array{array<mixed>, \PHPStan\Type\Type}
      *
      * @throws \Lookyman\JsonMapper\Exception\MapperException
      */
     private function mapArray(
-        iterable|stdClass $rawValue,
+        array|stdClass $rawValue,
         Type $expectedType,
     ): array {
         $array = [];
         $arrayBuilder = ConstantArrayTypeBuilder::createEmpty();
-        $keyType = $expectedType->getIterableKeyType();
+        $withStringKeys = $rawValue instanceof stdClass;
         $itemType = $expectedType->getIterableValueType();
 
         foreach ($rawValue as $key => $item) { // @phpstan-ignore-line
-            $keyValueAndType = $this->doMap($key, $keyType);
-            if (!$keyType->accepts($keyValueAndType[1], true)->yes()) {
-                throw new ArrayDoesNotAcceptValueMapperException($keyType, $key);
-            }
-
-            $itemValueAndType = $this->doMap($item, $itemType);
-            if (!$itemType->accepts($itemValueAndType[1], true)->yes()) {
+            $valueAndType = $this->doMap($item, $itemType);
+            if (!$itemType->accepts($valueAndType[1], true)->yes()) {
                 throw new ArrayDoesNotAcceptValueMapperException($itemType, $item);
             }
 
-            $array[$keyValueAndType[0]] = $itemValueAndType[0];
-            $arrayBuilder->setOffsetValueType($keyValueAndType[1], $itemValueAndType[1]);
+            $key = (string) $key;
+            if ($withStringKeys) {
+                $array[$key] = $valueAndType[0];
+            } else {
+                $array[] = $valueAndType[0];
+            }
+            $arrayBuilder->setOffsetValueType($withStringKeys ? new ConstantStringType($key) : null, $valueAndType[1]);
         }
 
         return [$array, $arrayBuilder->getArray()];

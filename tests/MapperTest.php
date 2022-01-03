@@ -29,6 +29,7 @@ use Lookyman\JsonMapper\Schema\LiteralBooleanParameter;
 use Lookyman\JsonMapper\Schema\LiteralFloatParameter;
 use Lookyman\JsonMapper\Schema\LiteralIntegerParameter;
 use Lookyman\JsonMapper\Schema\LiteralStringParameter;
+use Lookyman\JsonMapper\Schema\NullableArrayParameter;
 use Lookyman\JsonMapper\Schema\NullableParameter;
 use Lookyman\JsonMapper\Schema\ObjectWithoutClassParameter;
 use Lookyman\JsonMapper\Schema\StringEnum;
@@ -232,6 +233,12 @@ final class MapperTest extends TestCase
             (object) ['one' => 8],
             new IntegerRangeParameter(8),
         ];
+
+        yield 'nullable array of objects' => [
+            NullableArrayParameter::class,
+            (object) ['one' => [['one' => 'foo'], ['one' => 'bar']]],
+            new NullableArrayParameter([new StringParameter('foo'), new StringParameter('bar')]),
+        ];
     }
 
     /**
@@ -264,15 +271,18 @@ final class MapperTest extends TestCase
      *
      * @dataProvider mapErrorProvider
      */
-    public function testMapError(string $class, object $json, string $exception, string $message): void
+    public function testMapError(string $class, object $json, string $exception, ?string $message): void
     {
         $this->expectException($exception);
-        $this->expectExceptionMessage($message);
+        if ($message !== null) {
+            $this->expectExceptionMessage($message);
+        }
+
         $this->getDefaultMapper()->map($class, json_encode($json, JSON_THROW_ON_ERROR));
     }
 
     /**
-     * @return iterable<array{class-string, object, class-string<\Throwable>, string}>
+     * @return iterable<array{class-string, object, class-string<\Throwable>, ?string}>
      */
     public function mapErrorProvider(): iterable
     {
@@ -405,8 +415,8 @@ final class MapperTest extends TestCase
         yield 'generic iterable parameter' => [
             GenericIterableParameter::class,
             (object) ['one' => [['one' => 'foo'], ['one' => 'bar']]],
-            ArrayDoesNotAcceptValueMapperException::class,
-            'Array of type string does not accept 0',
+            ParameterDoesNotAcceptValueMapperException::class,
+            null,
         ];
 
         yield 'enum parameter' => [
